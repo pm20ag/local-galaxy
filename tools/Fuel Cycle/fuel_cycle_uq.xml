@@ -1,0 +1,130 @@
+<tool id="fuel_cycle_uq" name="Fuel Cycle UQ" version="1.0.0" python_template_version="3.5">
+    <description>Tritium fuel cycle Monte Carlo uncertainty quantification</description>
+
+    <requirements>
+        <requirement type="package" version="1.26">numpy</requirement>
+        <requirement type="package" version="1.13">scipy</requirement>
+        <requirement type="package" version="3.8">matplotlib</requirement>
+    </requirements>
+
+    <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/fuel_cycle_uq.py'
+            --mean_tbr      '$mean_tbr'
+            --std_tbr       '$std_tbr'
+            --fuelling_rate $fuelling_rate
+            --t0            $t0
+            --tN            $tN
+            --h             $h
+            --samples       $samples
+            --output_histogram  '$output_histogram'
+            --output_timeseries '$output_timeseries'
+            --output_data       '$output_data'
+    ]]></command>
+
+    <inputs>
+        <param name="mean_tbr" type="data" format="txt"
+               label="Mean Tritium Breeding Ratio (TBR)"
+               help="Dataset containing a single float: the mean TBR from the OpenMC simulation." />
+
+        <param name="std_tbr" type="data" format="txt"
+               label="Standard deviation of TBR"
+               help="Dataset containing a single float: the TBR std dev from the OpenMC simulation." />
+
+        <param name="fuelling_rate" type="float" value="0.00009" min="0.000001" max="0.01"
+               label="Fuelling rate (kg/s)"
+               help="Tritium fuelling rate in kg per second. Converted internally to kg/h." />
+
+        <param name="t0" type="float" value="0.0" min="0.0"
+               label="Start time (h)"
+               help="Simulation start time in hours." />
+
+        <param name="tN" type="float" value="2400.0" min="1.0"
+               label="End time (h)"
+               help="Simulation end time in hours." />
+
+        <param name="h" type="float" value="0.1" min="0.001" max="10.0"
+               label="Time step size (h)"
+               help="Integration step size for the Euler solver in hours. Smaller values increase accuracy and runtime." />
+
+        <param name="samples" type="integer" value="1000" min="10" max="100000"
+               label="Number of Monte Carlo samples"
+               help="Number of independent TBR samples drawn for uncertainty quantification." />
+    </inputs>
+
+    <outputs>
+        <data name="output_histogram" format="png" label="Storage distribution histogram (${tool.name})"/>
+        <data name="output_timeseries" format="png" label="Storage vs time plot (${tool.name})"/>
+        <data name="output_data" format="csv" label="Storage time-series data (${tool.name})"/>
+    </outputs>
+
+    <tests>
+        <test>
+            <param name="mean_tbr"      value="test_tbr_mean.txt"/>
+            <param name="std_tbr"       value="test_tbr_stdev.txt"/>
+            <param name="fuelling_rate" value="0.00009"/>
+            <param name="t0"            value="0.0"/>
+            <param name="tN"            value="100.0"/>
+            <param name="h"             value="1.0"/>
+            <param name="samples"       value="50"/>
+            <output name="output_histogram"  file="test_histogram.png"  compare="sim_size" delta="500000"/>
+            <output name="output_timeseries" file="test_timeseries.png" compare="sim_size" delta="500000"/>
+            <output name="output_data"       file="test_output.tabular" compare="sim_size" delta="10000"/>
+        </test>
+    </tests>
+
+    <help><![CDATA[
+**Fuel Cycle Uncertainty Quantification**
+
+Simulates tritium inventory dynamics in a fusion fuel cycle using both an exact
+analytical solution and a forward-Euler numerical solver. Monte Carlo sampling
+over the Tritium Breeding Ratio (TBR) propagates uncertainty through the system.
+
+-----
+
+**Inputs**
+
+- **Mean TBR** — The mean tritium breeding ratio. TBR > 1 means more tritium is
+  bred than burned. Values around 1.05–1.15 are typical design targets.
+
+- **Fuelling rate** — Total tritium fuel input rate in kg/s. Determines how much
+  tritium enters the plasma per unit time.
+
+- **Start / End time** — Simulation window in hours. A value of 2400 h ≈ 100 days.
+
+- **Time step** — Euler integration step. Values of 0.1 h are usually sufficient;
+  use smaller steps only if checking numerical accuracy.
+
+- **Monte Carlo samples** — Number of independent TBR realisations. 1000 samples
+  give good PDF estimates; use 10 000 for publication-quality results.
+
+-----
+
+**Outputs**
+
+1. **Histogram PNG** — Probability density of tritium in storage at the final
+   time step, overlaid with a Gaussian fit.
+
+2. **Time-series PNG** — Mean storage trajectory (exact and Euler) with ±1σ band.
+
+3. **CSV data** — Comma-separated file with columns:
+   ``time_h``, ``exact_mean_kg``, ``exact_std_kg``, ``euler_mean_kg``, ``euler_std_kg``
+
+-----
+
+**Model equations**
+
+The out-of-facility and in-facility inventories follow first-order ODEs driven
+by the burn rate and TBR. Storage tritium accumulates from IFC returns minus
+plasma consumption. See the companion MATLAB reference (Project_marvel.m) for
+the full analytical derivation.
+    ]]></help>
+
+    <citations>
+        <citation type="bibtex">
+@misc{project_marvel,
+  title  = {Tritium Fuel Cycle Uncertainty Quantification},
+  note   = {Converted from Project\_marvel.m}
+}
+        </citation>
+    </citations>
+</tool>

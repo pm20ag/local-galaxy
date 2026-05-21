@@ -1,0 +1,157 @@
+<?xml version="1.0"?>
+<tool id="coil_demo_sim" name="Coil Demo Simulator" version="1.0.0" python_template_version="3.5">
+
+    <description>Generate synthetic coil voltage waveforms for MiniMak demo sequences</description>
+
+    <!-- ── dependencies ─────────────────────────────────────────────────────
+         Uses Galaxy's own venv Python, which already has matplotlib.
+         No conda environment needed.
+    ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- ── command ───────────────────────────────────────────────────────── -->
+    <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/coil_demo_sim_galaxy.py'
+            --demo $demo
+            --interval_ms $advanced.interval_ms
+            --aoinc $advanced.aoinc
+            --v_max $advanced.v_max
+            --v_min $advanced.v_min
+            --alimit $advanced.alimit
+            --n_ticks $advanced.n_ticks
+            --output_csv '$output_csv'
+            --output_png '$output_png'
+    ]]></command>
+
+    <!-- ── inputs ────────────────────────────────────────────────────────── -->
+    <inputs>
+
+        <param name="demo" type="select" label="Demo sequence"
+               help="Select which coil demo to simulate. Matches the button labels in the MiniMak control GUI.">
+            <option value="tf1_demo">TF1 DEMO — TF Bank 1 sawtooth ramp</option>
+            <option value="tf2_demo">TF2 DEMO — TF Bank 2 sawtooth ramp</option>
+            <option value="pf_demo1">PF DEMO1 — PF Bank 1 sawtooth ramp</option>
+            <option value="pf2">PF2 — PF Bank 2 sawtooth ramp</option>
+            <option value="pf_demo2" selected="true">PF DEMO2 — Alternate PF1 / PF2 ramp (ring movement)</option>
+            <option value="tf1_pf">TF1&amp;PF — Alternate TF1 / PF1 ramp</option>
+        </param>
+
+        <section name="advanced" title="Simulation parameters" expanded="false">
+            <param name="interval_ms" type="float" value="100.0" min="1.0"
+                   label="Timer interval (ms)"
+                   help="Period of the TimerAO tick. Default matches the UI default of 100 ms."/>
+            <param name="aoinc" type="float" value="0.025" min="0.001" max="1.0"
+                   label="Voltage step per tick (V)"
+                   help="Multiplied by the tick counter to give the ramp increment. Default: 0.025."/>
+            <param name="v_max" type="float" value="5.0" min="0.1" max="10.0"
+                   label="Ramp ceiling (V)"
+                   help="Voltage at which the ramp resets. Default: 5.0 V."/>
+            <param name="v_min" type="float" value="0.0" min="0.0" max="9.9"
+                   label="Ramp floor (V)"
+                   help="Voltage the ramp resets to. Default: 0.0 V."/>
+            <param name="alimit" type="float" value="5.0" min="0.1" max="10.0"
+                   label="Hardware output clamp (V)"
+                   help="Maximum voltage the PSU setpoint is clamped to. Default: 5.0 V."/>
+            <param name="n_ticks" type="integer" value="200" min="1" max="100000"
+                   label="Number of ticks to simulate"
+                   help="Total number of TimerAO firings to simulate. Default: 200 (= 20 s at 100 ms interval)."/>
+        </section>
+
+    </inputs>
+
+    <!-- ── outputs ───────────────────────────────────────────────────────── -->
+    <!--
+        Galaxy writes each <data> output to a managed path and passes that
+        path into the command as $output_csv / $output_png.  The tool writes
+        to those paths; Galaxy then shows the datasets in the history panel.
+
+        format="png"  → Galaxy renders the image inline when you click the
+                        eye (👁) icon.  No extra viewer configuration needed.
+        format="csv"  → Galaxy's built-in Charts tool can produce interactive
+                        plots directly from the CSV history item.
+    -->
+    <outputs>
+        <data name="output_csv" format="csv"
+              label="${demo} voltages.csv"/>
+        <data name="output_png" format="png"
+              label="${demo} waveform.png"/>
+    </outputs>
+
+    <!-- ── tests ─────────────────────────────────────────────────────────── -->
+    <tests>
+        <!-- smoke test: PF DEMO2 with defaults, check CSV has header + 200 rows -->
+        <test>
+            <param name="demo" value="7"/>
+            <output name="output_csv">
+                <assert_contents>
+                    <has_text text="t_ms,t_s,Aout0,channel_switch,V_ch0,V_ch1,V_ch2,V_ch3"/>
+                    <has_n_lines n="201"/>  <!-- header + 200 data rows -->
+                </assert_contents>
+            </output>
+        </test>
+        <!-- single-channel test: TF1 DEMO, ch1–ch3 should all be zero -->
+        <test>
+            <param name="demo" value="1"/>
+            <output name="output_csv">
+                <assert_contents>
+                    <has_text text="t_ms,t_s,Aout0,channel_switch,V_ch0,V_ch1,V_ch2,V_ch3"/>
+                    <not_has_text text=",0.0,0.0,0.0" />
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+
+    <!-- ── help ──────────────────────────────────────────────────────────── -->
+    <help><![CDATA[
+**Coil Demo Simulator**
+
+Generates synthetic PSU setpoint voltage waveforms for MiniMak coil demo
+sequences, reproducing the exact ``TimerAO_Tick`` logic from ``FormMain.vb``.
+
+------
+
+**Demo sequences**
+
++----------+-----------+------------------------------------------------------+
+| Value    | GUI label | Description                                          |
++==========+===========+======================================================+
+| 1        | TF1 DEMO  | Sawtooth ramp on AO ch 0 (TF bank 1)                |
++----------+-----------+------------------------------------------------------+
+| 2        | TF2 DEMO  | Sawtooth ramp on AO ch 1 (TF bank 2)                |
++----------+-----------+------------------------------------------------------+
+| 3        | PF DEMO1  | Sawtooth ramp on AO ch 0 (PF bank 1)                |
++----------+-----------+------------------------------------------------------+
+| 4        | PF2       | Sawtooth ramp on AO ch 1 (PF bank 2)                |
++----------+-----------+------------------------------------------------------+
+| 7        | PF DEMO2  | Alternating PF1/PF2 ramp — causes the plasma ring    |
+|          |           | to move up and down the chamber centre               |
++----------+-----------+------------------------------------------------------+
+| 8        | TF1&PF    | Alternating TF1/PF1 ramp (PF1 at half amplitude)    |
++----------+-----------+------------------------------------------------------+
+
+------
+
+**Outputs**
+
+*CSV* — one row per timer tick with columns:
+
+- ``t_ms`` / ``t_s`` — elapsed time in ms and seconds
+- ``Aout0`` — ramp accumulator value
+- ``channel_switch`` — active coil selection flag (0 or 1)
+- ``V_ch0`` … ``V_ch3`` — PSU setpoint voltage for each AO channel (V)
+
+*PNG* — step-waveform plot of the active channels for the chosen demo.
+
+------
+
+**PC DAQ channel mapping**
+
+- AO ch 0 → TF bank 1
+- AO ch 1 → TF bank 2
+- AO ch 2 → PF bank 1
+- AO ch 3 → PF bank 2
+    ]]></help>
+
+    <!-- ── citations ─────────────────────────────────────────────────────── -->
+    <citations/>
+
+</tool>

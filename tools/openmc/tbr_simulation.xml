@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='utf-8'?>
+<tool id="openmc_tbr" name="OpenMC TBR Simulation" version="0.2.0">
+    <description>Multiphysics neutron transport with TBR and mesh tallies</description>
+
+    <requirements>
+        <container type="docker">openmc/openmc</container>
+    </requirements>
+
+    <command><![CDATA[
+        python '$__tool_directory__/tbr_simulation.py'
+            --materials #for $layer in $geometry.layers# '${layer.material}' #end for#
+            --thicknesses #for $layer in $geometry.layers# '${layer.thickness}' #end for#
+            --enrichment $simulation.enrichment
+            --batches $simulation.batches
+            --particles $simulation.particles
+            --mesh_resolution $simulation.mesh_resolution
+            --output '$output'
+            --tbr_mean_output '$tbr_mean_output'
+            --tbr_stdev_output '$tbr_stdev_output'
+            --heating_output '$heating_output'
+            --dpa_output '$dpa_output'
+    ]]></command>
+
+    <inputs>
+        <section name="geometry" title="Geometry Layers" expanded="true">
+            <repeat name="layers" title="Layer" min="1">
+                <param name="material" type="select" label="Material">
+                    <option value="lithium" selected="true">Lithium (breeder)</option>
+                    <option value="tungsten">Tungsten (first wall)</option>
+                    <option value="steel">Steel / SS316 (structural)</option>
+                    <option value="beryllium">Beryllium (multiplier)</option>
+                </param>
+                <param name="thickness" type="float" value="10.0" min="0.1" max="500.0"
+                       label="Thickness (cm)"/>
+            </repeat>
+        </section>
+
+        <section name="simulation" title="Simulation Settings" expanded="true">
+            <param name="enrichment" type="float" value="0.9" min="0.01" max="1.0"
+                   label="Li-6 Enrichment Fraction"
+                   help="Natural lithium = 0.076, fully enriched = 1.0"/>
+            <param name="batches" type="integer" value="50" min="10" max="500"
+                   label="Batches"/>
+            <param name="particles" type="integer" value="5000" min="100" max="1000000"
+                   label="Particles per batch"/>
+            <param name="mesh_resolution" type="integer" value="50" min="10" max="200"
+                   label="Mesh resolution"
+                   help="NxNxN mesh for heating and DPA tallies"/>
+        </section>
+    </inputs>
+
+    <outputs>
+        <data name="output" format="txt" label="TBR Report"/>
+        <data name="tbr_mean_output" format="txt" label="TBR Mean"/>
+        <data name="tbr_stdev_output" format="txt" label="TBR Std Dev"/>
+        <data name="heating_output" format="csv" label="Heating Mesh"/>
+        <data name="dpa_output" format="csv" label="DPA Mesh"/>
+    </outputs>
+
+    <stdio>
+        <exit_code range="1:" level="fatal"/>
+        <regex match="Error" source="stderr" level="fatal"/>
+    </stdio>
+
+    <help><![CDATA[
+**OpenMC Multiphysics Simulation**
+
+Runs neutron transport through a parametric layered spherical geometry using a 14.1 MeV DT fusion neutron source.
+
+**Geometry**
+
+Add one or more layers in order from the centre outward. Each layer has a material and thickness in cm.
+
+**Supported materials**
+
+- Lithium (breeder) — Li-6/Li-7 mix, density 0.534 g/cm³
+- Tungsten (first wall) — W, density 19.3 g/cm³
+- Steel / SS316 (structural) — Fe/Cr/Ni/Mo/Mn/Si mix, density 7.99 g/cm³
+- Beryllium (multiplier) — Be, density 1.85 g/cm³
+
+**Simulation Settings**
+
+- Li-6 enrichment fraction (natural = 0.076, fully enriched = 1.0)
+- Batches and particles control statistical accuracy
+- Mesh resolution sets the NxNxN grid for heating and DPA tallies
+
+**Outputs**
+
+- TBR report — human readable summary of geometry and results
+- TBR tabular — TBR mean and std dev for use in Galaxy workflows
+- Heating mesh — volumetric heat deposition (eV/source particle) on 3D mesh
+- DPA mesh — damage energy (eV/source particle) on 3D mesh
+    ]]></help>
+</tool>
