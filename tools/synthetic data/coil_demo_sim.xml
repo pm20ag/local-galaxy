@@ -8,12 +8,12 @@
   <command detect_errors="exit_code"><![CDATA[
         python '$__tool_directory__/coil_demo_sim.py'
             --demo        $demo
-            --interval-ms '$interval_ms'
-            --aoinc       '$aoinc'
-            --v-max       '$v_max'
-            --v-min       '$v_min'
-            --alimit      '$alimit'
-            --n-ticks     $n_ticks
+            --duration     '$duration'
+            --timestep-ms  '$timestep_ms'
+            --aoinc        '$aoinc'
+            --v-max        '$v_max'
+            --v-min        '$v_min'
+            --alimit       '$alimit'
             --output-csv  output.csv
             --output-png  output.png &&
         mv output.csv '$output_csv' &&
@@ -30,10 +30,10 @@
       <option value="7" selected="true">SQ7 - PF Demo 2: alternate ramp PF1 / PF2 (ring movement)</option>
       <option value="8">SQ8 - Alternate ramp TF1 / PF1</option>
     </param>
-    <param type="integer" name="n_ticks"     value="200"   label="Number of ticks"
-           help="Total number of timer ticks to simulate"/>
-    <param type="float"   name="interval_ms" value="100.0" label="Timer interval (ms)"
-           help="Period of the control loop timer - matches FormMain UI default"/>
+    <param type="float"   name="duration"    value="20.0"  label="Simulation duration (s)"
+           help="Total length of the simulated sequence in seconds"/>
+    <param type="float"   name="timestep_ms" value="100.0" label="Timestep (ms)"
+           help="Control loop timer period in milliseconds - matches FormMain UI default"/>
     <param type="float"   name="aoinc"       value="0.025" label="Voltage step per tick (V)"
            help="Ramp accumulator increment multiplier per tick - matches FormMain UI default"/>
     <param type="float"   name="v_max"       value="5.0"   label="Ramp ceiling (V)"

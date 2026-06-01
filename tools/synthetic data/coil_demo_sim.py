@@ -156,8 +156,10 @@ def main():
     parser.add_argument("--demo",        type=int,   required=True,
                         choices=sorted(DEMO_META),
                         help="Demo sequence to simulate (1,2,3,4,7,8)")
-    parser.add_argument("--interval-ms", type=float, default=100.0,
-                        help="Timer period [ms]")
+    parser.add_argument("--duration",     type=float, default=20.0,
+                        help="Total simulation duration [s]")
+    parser.add_argument("--timestep-ms", type=float, default=100.0,
+                        help="Timer period / timestep [ms]")
     parser.add_argument("--aoinc",       type=float, default=0.025,
                         help="Voltage step multiplier per tick")
     parser.add_argument("--v-max",       type=float, default=5.0,
@@ -166,22 +168,21 @@ def main():
                         help="Ramp floor [V]")
     parser.add_argument("--alimit",      type=float, default=5.0,
                         help="Hardware output clamp [V]")
-    parser.add_argument("--n-ticks",     type=int,   default=200,
-                        help="Number of timer ticks to simulate")
     parser.add_argument("--output-csv",  required=True,
                         help="Output voltage/current time-series CSV path")
     parser.add_argument("--output-png",  required=True,
                         help="Output channel voltage plot PNG path")
     args = parser.parse_args()
 
+    n_ticks = max(1, int(args.duration * 1000 / args.timestep_ms))
     records = simulate(
         demo=args.demo,
-        interval_ms=args.interval_ms,
+        interval_ms=args.timestep_ms,
         aoinc=args.aoinc,
         v_max=args.v_max,
         v_min=args.v_min,
         alimit=args.alimit,
-        n_ticks=args.n_ticks,
+        n_ticks=n_ticks,
     )
 
     write_csv(records, args.output_csv)
