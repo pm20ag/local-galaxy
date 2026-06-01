@@ -1,0 +1,57 @@
+<tool id="parametric_coil_generator" name="Parametric Tokamak Coil Generator" version="0.1.0">
+  <description>Generate TF and PF coil geometry for a tokamak as a 3D plot and tagged coordinate table</description>
+
+  <requirements>
+    <container type="docker">anthny23/python-sci:1.0.0</container>
+  </requirements>
+
+  <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/parametric_coil_generator.py'
+            --major-radius      '$major_radius'
+            --tf-coil-radius    '$tf_coil_radius'
+            --n-tf-coils        $n_tf_coils
+            --pf-coil-radius    '$pf_coil_radius'
+            --pf-coil-z         '$pf_coil_z'
+            --n-points          $n_points
+            --output-png        '$output_png'
+            --output-csv        '$output_csv'
+  ]]></command>
+
+  <inputs>
+    <param type="float"   name="major_radius"   value="0.23"  label="Major radius R0 (m)"
+           help="Distance from the torus centre to the centre of each TF coil"/>
+    <param type="float"   name="tf_coil_radius" value="0.075" label="TF coil loop radius (m)"
+           help="Radius of each toroidal field coil loop"/>
+    <param type="integer" name="n_tf_coils"     value="8"     label="Number of TF coils"
+           help="Number of toroidal field coils evenly spaced in toroidal angle"/>
+    <param type="float"   name="pf_coil_radius" value="0.12"  label="PF coil ring radius (m)"
+           help="Radius of the PF coil rings from the machine axis"/>
+    <param type="float"   name="pf_coil_z"      value="0.15"  label="PF coil distance from midplane (m)"
+           help="Axial distance of the upper and lower poloidal field coils from the device midplane"/>
+    <param type="integer" name="n_points"       value="200"   label="Points per coil loop"
+           help="Number of coordinate points used to discretise each coil"/>
+  </inputs>
+
+  <outputs>
+    <data format="png"     name="output_png" label="Coil geometry plot"
+          help="3D visualisation of TF and PF coil positions"/>
+    <data format="csv" name="output_csv" label="Coil coordinate data"
+          help="Tab-separated coordinate table tagged by coil ID and type for MFEM/MOOSE input"/>
+  </outputs>
+
+  <help>
+**Parametric Tokamak Coil Generator**
+
+Produces line-model geometry for the toroidal field (TF) and poloidal field (PF) coils of a tokamak.
+
+The origin is at the centre of the torus (where the major radius is measured). All coils are modelled as closed loops of 3D coordinate points.
+
+**TF coils** are evenly distributed in toroidal angle and each lie in the poloidal plane at their respective angle.
+
+**PF coils** are two horizontal rings (upper and lower) at +/-Z from the midplane, centred on the machine axis at the major radius.
+
+The tabular output tags every point with coil_id and coil_type so downstream MFEM/MOOSE parsers can identify individual coil circuits.
+  </help>
+
+  <citations/>
+</tool>

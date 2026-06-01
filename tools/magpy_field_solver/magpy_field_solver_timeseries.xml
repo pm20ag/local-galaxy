@@ -1,0 +1,96 @@
+<tool id="magpy_field_solver_timeseries" name="Magpy Field Solver (Time Series)" version="0.1.0">
+  <description>Biot-Savart magnetic field solver driven by a batch of coil current timesteps</description>
+
+  <requirements>
+    <container type="docker">anthny23/python-sci-magpy:1.0.0</container>
+  </requirements>
+
+  <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/magpy_field_solver_timeseries.py'
+            --input-coils    '$input_coils'
+            --input-currents '$input_currents'
+            --tf-gain        '$tf_gain'
+            --pf-gain        '$pf_gain'
+            --r-min          '$r_min'
+            --r-max          '$r_max'
+            --z-min          '$z_min'
+            --z-max          '$z_max'
+            --grid-n         $grid_n
+            --output-gif     output.gif
+            --output-png     output.png
+            --output-gif-mid output_mid.gif
+            --output-png-mid output_mid.png &&
+        mv output.gif '$output_gif' &&
+        mv output.png '$output_png' &&
+        mv output_mid.gif '$output_gif_mid' &&
+        mv output_mid.png '$output_png_mid'
+  ]]></command>
+
+  <inputs>
+    <param type="data"    name="input_coils"    format="csv" label="Coil geometry (CSV)"
+           help="Coil coordinate CSV file from the Parametric Tokamak Coil Generator"/>
+    <param type="data"    name="input_currents" format="csv"     label="Current time-series (CSV)"
+           help="Voltage/current time-series CSV from the MiniMak synthetic data generator (all timesteps)"/>
+    <param type="float"   name="tf_gain"        value="2000.0"   label="TF PSU gain (A/V)"
+           help="Converts TF bank setpoint voltage to current - Lianshu PSU (ch0, ch1)"/>
+    <param type="float"   name="pf_gain"        value="1000.0"   label="PF PSU gain (A/V)"
+           help="Converts PF bank setpoint voltage to current - ZJIVnV PSU (ch2, ch3)"/>
+    <param type="float"   name="r_min"          value="0.0"      label="R grid minimum (m)"
+           help="Inner radial bound of the R-Z field map"/>
+    <param type="float"   name="r_max"          value="0.5"      label="R grid maximum (m)"
+           help="Outer radial bound of the R-Z field map"/>
+    <param type="float"   name="z_min"          value="-0.4"     label="Z grid minimum (m)"
+           help="Lower axial bound of the R-Z field map"/>
+    <param type="float"   name="z_max"          value="0.4"      label="Z grid maximum (m)"
+           help="Upper axial bound of the R-Z field map"/>
+    <param type="integer" name="grid_n"         value="40"       label="Grid resolution (N x N)"
+           help="Number of points per axis - higher values give sharper maps but take longer"/>
+  </inputs>
+
+  <outputs>
+    <data format="png" name="output_gif" label="R-Z field evolution animation (GIF)"
+          help="Animated poloidal R-Z field map over all timesteps in the current time-series"/>
+    <data format="png" name="output_png" label="R-Z peak field frame (PNG)"
+          help="Static poloidal R-Z field map at the timestep with the highest total |B|"/>
+    <data format="png" name="output_gif_mid" label="Midplane field animation (GIF)"
+          help="Animated X-Y midplane (Z=0) field map over all timesteps"/>
+    <data format="png" name="output_png_mid" label="Midplane peak field frame (PNG)"
+          help="Static X-Y midplane field map at the timestep with the highest total |B|"/>
+  </outputs>
+
+  <help>
+**Magpy Field Solver - Batch Time-Series Mode**
+
+Computes the Biot-Savart magnetic field for a tokamak coil set driven by a
+batch of current timesteps from the MiniMak synthetic data generator.
+
+**Inputs**
+
+- *Coil geometry CSV* - produced by the Parametric Tokamak Coil Generator tool.
+  Contains one row per coil coordinate point tagged with coil_id and coil_type.
+
+- *Current time-series CSV* - produced by coil_demo_sim.py (MiniMak firmware).
+  Contains columns t_ms, t_s, V_ch0..V_ch3 representing PSU setpoint voltages
+  over a full demo sequence. All timesteps are processed in one batch run.
+
+**NOTE:** This tool processes a complete pre-recorded time series in one batch.
+A separate real-time single-timestep variant (for live MQTT-driven use) will
+be available subsequently.
+
+**PSU gain factors**
+
+The CSV stores voltages, not currents. Supply the gain (A/V) for each PSU type:
+
+- TF banks (ch0, ch1) use the Lianshu PSU
+- PF banks (ch2, ch3) use the ZJIVnV PSU
+
+**Outputs**
+
+- *R-Z GIF* - animated poloidal cross-section field map (inferno colormap)
+- *R-Z PNG* - static poloidal snapshot at the frame with the highest total |B|
+- *Midplane GIF* - animated top-down X-Y field map at Z=0 (viridis colormap)
+- *Midplane PNG* - static top-down snapshot at the frame with the highest total |B|
+  </help>
+
+  <citations/>
+</tool>
