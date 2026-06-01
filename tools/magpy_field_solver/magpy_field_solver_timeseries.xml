@@ -2,7 +2,7 @@
   <description>Biot-Savart magnetic field solver driven by a batch of coil current timesteps</description>
 
   <requirements>
-    <container type="docker">anthny23/python-sci-magpy:1.0.0</container>
+    <container type="docker">anthny23/python-sci-magpy:1.1.0</container>
   </requirements>
 
   <command detect_errors="exit_code"><![CDATA[
@@ -17,13 +17,11 @@
             --z-max          '$z_max'
             --grid-n         $grid_n
             --output-gif     output.gif
-            --output-png     output.png
             --output-gif-mid output_mid.gif
-            --output-png-mid output_mid.png &&
+            --output-vtk     output.vts &&
         mv output.gif '$output_gif' &&
-        mv output.png '$output_png' &&
         mv output_mid.gif '$output_gif_mid' &&
-        mv output_mid.png '$output_png_mid'
+        mv output.vts '$output_vtk'
   ]]></command>
 
   <inputs>
@@ -50,12 +48,10 @@
   <outputs>
     <data format="png" name="output_gif" label="R-Z field evolution animation (GIF)"
           help="Animated poloidal R-Z field map over all timesteps in the current time-series"/>
-    <data format="png" name="output_png" label="R-Z peak field frame (PNG)"
-          help="Static poloidal R-Z field map at the timestep with the highest total |B|"/>
     <data format="png" name="output_gif_mid" label="Midplane field animation (GIF)"
           help="Animated X-Y midplane (Z=0) field map over all timesteps"/>
-    <data format="png" name="output_png_mid" label="Midplane peak field frame (PNG)"
-          help="Static X-Y midplane field map at the timestep with the highest total |B|"/>
+    <data format="xml" name="output_vtk" label="Volumetric B field (VTK XML)"
+          help="VTK XML structured grid (.vts) at peak-current timestep - open in ParaView or convert to OpenUSD for Omniverse. Rename to .vts if auto-detection fails."/>
   </outputs>
 
   <help>
@@ -87,9 +83,8 @@ The CSV stores voltages, not currents. Supply the gain (A/V) for each PSU type:
 **Outputs**
 
 - *R-Z GIF* - animated poloidal cross-section field map (inferno colormap)
-- *R-Z PNG* - static poloidal snapshot at the frame with the highest total |B|
 - *Midplane GIF* - animated top-down X-Y field map at Z=0 (viridis colormap)
-- *Midplane PNG* - static top-down snapshot at the frame with the highest total |B|
+- *VTK* - full 3-D structured grid with B vector field and |B| scalar at the peak-current timestep; open in ParaView or convert to OpenUSD for NVIDIA Omniverse
   </help>
 
   <citations/>

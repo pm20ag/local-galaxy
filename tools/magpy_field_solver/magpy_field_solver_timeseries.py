@@ -21,15 +21,16 @@ The synthetic data CSV stores PSU setpoint voltages (V), not currents (A).
 Outputs
 -------
   --output-gif      : animated GIF of the R-Z (poloidal) field map over time
-  --output-png      : static PNG of the R-Z peak-field frame
   --output-gif-mid  : animated GIF of the X-Y (midplane, z=0) field map over time
-  --output-png-mid  : static PNG of the midplane peak-field frame
+  --output-vtk      : VTK structured grid of the full 3-D B field at peak-current timestep
+                      (can be loaded into ParaView or converted to OpenUSD for Omniverse)
 """
 
 import argparse
 import csv
 import numpy as np
 import magpylib as magpy
+import pyvista as pv
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -155,6 +156,57 @@ def compute_midplane_field(sources, points, grid_shape):
 
 
 # ---------------------------------------------------------------------------
+# 3-D volumetric grid + VTK writer
+# ---------------------------------------------------------------------------
+
+def build_3d_grid(r_max, z_range, grid_n):
+    """
+    Full Cartesian X-Y-Z grid for volumetric output.
+    X and Y span [-r_max, r_max]; Z spans z_range.
+    Returns the meshgrid arrays and the (N^3, 3) query point array.
+    """
+    xy = np.linspace(-r_max, r_max, grid_n)
+    z  = np.linspace(z_range[0], z_range[1], grid_n)
+    X, Y, Z = np.meshgrid(xy, xy, z, indexing="ij")
+    points = np.column_stack([X.ravel(), Y.ravel(), Z.ravel()])
+    return X, Y, Z, points
+
+
+def compute_3d_field(sources, points):
+    """Return (Bx, By, Bz) arrays for every point in the 3-D grid."""
+    collection = magpy.Collection(*sources.values(), override_parent=True)
+    B = magpy.getB(collection, points)   # shape (N, 3)
+    return B[:, 0], B[:, 1], B[:, 2]
+
+
+def write_vtk(sources, X, Y, Z, output_path):
+    """
+    Compute the B vector field on the 3-D structured grid and write a
+    VTK XML StructuredGrid (.vts) file using pyvista.  The dataset contains:
+      - 'B'     : (Bx, By, Bz) vector field [T]
+      - 'Bmag'  : |B| scalar field [T]
+
+    Saved as VTK XML so the header is human-readable and ParaView can identify
+    the format regardless of file extension.  Load in ParaView with
+    File > Open, or rename to .vts if auto-detection fails.
+    Can also be converted to OpenUSD for NVIDIA Omniverse.
+    """
+    shape   = X.shape          # (grid_n, grid_n, grid_n)
+    points  = np.column_stack([X.ravel(), Y.ravel(), Z.ravel()])
+    Bx, By, Bz = compute_3d_field(sources, points)
+
+    grid = pv.StructuredGrid(X, Y, Z)
+    B_vec = np.column_stack([Bx, By, Bz])
+    grid.point_data["B"]    = B_vec
+    grid.point_data["Bmag"] = np.linalg.norm(B_vec, axis=1)
+    # Save as VTK XML format — readable by ParaView and convertible to OpenUSD
+    grid.save(output_path, binary=False)
+    print(f"Written: {output_path}  "
+          f"(grid {shape[0]}x{shape[1]}x{shape[2]}, "
+          f"|B| max = {grid.point_data['Bmag'].max():.4f} T)")
+
+
+# ---------------------------------------------------------------------------
 # Coil cross-section markers for R-Z plot
 # ---------------------------------------------------------------------------
 
@@ -207,11 +259,11 @@ def render_midplane(ax, X, Y, Bmag_i, Bx_i, By_i, vmin, vmax, title):
 # Batch run
 # ---------------------------------------------------------------------------
 
-def run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, args):
+def run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, X3, Y3, Z3, args):
     """
     Compute B field for ALL timesteps (batch mode), then write:
-      - R-Z animated GIF + peak PNG
-      - Midplane (X-Y, Z=0) animated GIF + peak PNG
+      - R-Z animated GIF
+      - Midplane (X-Y, Z=0) animated GIF
 
     NOTE: all timesteps are held in memory. For single-step streaming see
     magpy_field_solver_realtime.py.
@@ -283,33 +335,12 @@ def run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, arg
     plt.close()
     print(f"Written: {args.output_gif_mid}")
 
-    # --- R-Z peak PNG ---
+    # --- VTK volumetric output at peak-current timestep ---
     peak = int(np.argmax(Bmag_rz.max(axis=(1, 2))))
-    fig2, ax2 = plt.subplots(figsize=(7, 8))
-    plt.colorbar(plt.cm.ScalarMappable(
-        norm=mcolors.Normalize(vmin=vmin, vmax=vmax), cmap="inferno"),
-        ax=ax2, label="log10 |B| (T)")
-    render_rz(ax2, R, Z, Bmag_rz[peak], Br_all[peak], Bz_all[peak],
-              vmin, vmax, markers,
-              f"R-Z peak frame  |  {frame_title(timeseries[peak])}")
-    plt.tight_layout()
-    plt.savefig(args.output_png, dpi=150, format="png")
-    plt.close()
-    print(f"Written: {args.output_png}  (peak at t={timeseries[peak]['t_s']:.3f} s)")
+    print(f"Writing VTK at peak timestep {peak}  (t={timeseries[peak]['t_s']:.3f} s)...")
+    set_currents(sources, coils, timeseries[peak])
+    write_vtk(sources, X3, Y3, Z3, args.output_vtk)
 
-    # --- Midplane peak PNG ---
-    peak_m = int(np.argmax(Bmag_mid.max(axis=(1, 2))))
-    fig3, ax3 = plt.subplots(figsize=(7, 7))
-    plt.colorbar(plt.cm.ScalarMappable(
-        norm=mcolors.Normalize(vmin=vmin, vmax=vmax), cmap="viridis"),
-        ax=ax3, label="log10 |B| (T)")
-    render_midplane(ax3, X, Y, Bmag_mid[peak_m], Bx_all[peak_m], By_all[peak_m],
-                    vmin, vmax,
-                    f"Midplane peak  |  {frame_title(timeseries[peak_m])}")
-    plt.tight_layout()
-    plt.savefig(args.output_png_mid, dpi=150, format="png")
-    plt.close()
-    print(f"Written: {args.output_png_mid}  (peak at t={timeseries[peak_m]['t_s']:.3f} s)")
 
 
 # ---------------------------------------------------------------------------
@@ -341,12 +372,10 @@ def main():
                         help="Grid resolution NxN")
     parser.add_argument("--output-gif",      required=True,
                         help="R-Z animated GIF output path")
-    parser.add_argument("--output-png",      required=True,
-                        help="R-Z peak-frame PNG output path")
     parser.add_argument("--output-gif-mid",  required=True,
                         help="Midplane animated GIF output path")
-    parser.add_argument("--output-png-mid",  required=True,
-                        help="Midplane peak-frame PNG output path")
+    parser.add_argument("--output-vtk",      required=True,
+                        help="VTK structured grid output path (peak timestep)")
     args = parser.parse_args()
 
     coils      = load_coils(args.input_coils)
@@ -359,8 +388,9 @@ def main():
         grid_n=args.grid_n,
     )
     X, Y, mid_points = build_midplane_grid(args.r_max, args.grid_n)
+    X3, Y3, Z3, _    = build_3d_grid(args.r_max, (args.z_min, args.z_max), args.grid_n)
 
-    run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, args)
+    run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, X3, Y3, Z3, args)
 
 
 if __name__ == "__main__":
