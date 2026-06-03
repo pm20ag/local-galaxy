@@ -56,7 +56,8 @@ def load_coils(csv_path):
         for row in reader:
             cid = row["coil_id"]
             if cid not in coils:
-                coils[cid] = {"type": row["coil_type"], "vertices": []}
+                bank = int(row["bank"]) if row.get("bank", "") != "" else None
+                coils[cid] = {"type": row["coil_type"], "bank": bank, "vertices": []}
             coils[cid]["vertices"].append(
                 (float(row["x_m"]), float(row["y_m"]), float(row["z_m"]))
             )
@@ -106,9 +107,13 @@ def build_sources(coils):
 
 
 def set_currents(sources, coils, record):
+    # TF coils carry a bank field (1 or 2) written by the coil generator.
+    # Bank 1 (ch0) -> I_tf1, Bank 2 (ch1) -> I_tf2.
     for cid, src in sources.items():
-        if coils[cid]["type"] == "TF":
-            src.current = record["I_tf1"]
+        ctype = coils[cid]["type"]
+        if ctype == "TF":
+            bank = coils[cid].get("bank")
+            src.current = record["I_tf1"] if bank == 1 else record["I_tf2"]
         elif cid == "PF_upper":
             src.current = record["I_pf1"]
         elif cid == "PF_lower":
@@ -297,7 +302,8 @@ def run_batch(coils, sources, timeseries, R, Z, rz_points, X, Y, mid_points, X3,
 
     def frame_title(rec):
         return (f"t = {rec['t_s']:.3f} s  |  "
-                f"I_TF = {rec['I_tf1']:.1f} A  "
+                f"I_TF1 = {rec['I_tf1']:.1f} A  "
+                f"I_TF2 = {rec['I_tf2']:.1f} A  "
                 f"I_PF+ = {rec['I_pf1']:.1f} A  "
                 f"I_PF- = {rec['I_pf2']:.1f} A")
 

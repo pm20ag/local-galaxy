@@ -31,7 +31,8 @@ def generate_coils(major_radius, tf_coil_radius, n_tf_coils, pf_coil_radius, pf_
     tf_angles = np.linspace(0, 360, n_tf_coils, endpoint=False)
     for i, phi in enumerate(tf_angles):
         x, y, z = make_tf_coil(phi, major_radius, tf_coil_radius, n_points)
-        coils.append({"type": "TF", "id": f"TF_{i:02d}", "phi_deg": phi,
+        bank = 1 if i < n_tf_coils // 2 else 2
+        coils.append({"type": "TF", "id": f"TF_{i:02d}", "bank": bank, "phi_deg": phi,
                        "x": x, "y": y, "z": z})
 
     for sign, label in [(+1, "upper"), (-1, "lower")]:
@@ -45,10 +46,11 @@ def generate_coils(major_radius, tf_coil_radius, n_tf_coils, pf_coil_radius, pf_
 def write_csv(coils, output_path):
     with open(output_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["coil_id", "coil_type", "point_index", "x_m", "y_m", "z_m"])
+        writer.writerow(["coil_id", "coil_type", "bank", "point_index", "x_m", "y_m", "z_m"])
         for coil in coils:
+            bank = coil.get("bank", "")
             for i, (x, y, z) in enumerate(zip(coil["x"], coil["y"], coil["z"])):
-                writer.writerow([coil["id"], coil["type"], i,
+                writer.writerow([coil["id"], coil["type"], bank, i,
                                   f"{x:.6f}", f"{y:.6f}", f"{z:.6f}"])
 
 
