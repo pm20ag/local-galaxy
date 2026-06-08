@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tallies>
+  <filter id="1" type="cell">
+    <bins>2</bins>
+  </filter>
+  <tally id="1" name="TBR">
+    <filters>1</filters>
+    <scores>(n,Xt)</scores>
+  </tally>
+</tallies>

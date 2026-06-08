@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material id="1" name="vacuum">
+    <density value="1e-10" units="g/cm3"/>
+    <nuclide name="He4" ao="1.0"/>
+  </material>
+  <material id="2" name="FLiBe">
+    <density value="1.94" units="g/cm3"/>
+    <nuclide name="Li6" ao="0.15"/>
+    <nuclide name="Li7" ao="1.85"/>
+    <nuclide name="Be9" ao="1.0"/>
+    <nuclide name="F19" ao="4.0"/>
+  </material>
+</materials>

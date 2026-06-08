@@ -1,0 +1,120 @@
+<tool id="minimak_tbr_wedge" name="MiniMak TBR Wedge Simulation" version="0.2.0">
+
+  <description>Tritium Breeding Ratio estimate for the MiniMak via an OpenMC CSG wedge model</description>
+
+  <requirements>
+    <container type="docker">williamjsmith15/omniverse-openmc:05062023</container>
+  </requirements>
+
+  <command><![CDATA[
+    python '$__tool_directory__/minimak_tbr_wedge.py'
+      --blanket-thick  '$blanket_thick'
+      --major-radius   '$major_radius'
+      --minor-radius   '$minor_radius'
+      --fw-gap         '$fw_gap'
+      --fw-thick       '$fw_thick'
+      --fw-material    '$fw_material'
+      --be-thick        '$be_thick'
+      --blanket-material '$blanket_material'
+      --particles       '$particles'
+      --batches        '$batches'
+      --li6-enrichment '$li6_enrichment'
+      --output         '$tbr_result'
+      \${GALAXY_SLOTS:-1}
+    2>&1
+  ]]></command>
+
+  <inputs>
+    <section name="geometry" title="Geometry" expanded="true">
+      <param name="major_radius" type="float" value="0.23" min="0.05" max="2.0"
+             label="Plasma major radius R₀ (m)"/>
+      <param name="minor_radius" type="float" value="0.045" min="0.01" max="0.5"
+             label="Plasma minor radius a (m)"/>
+      <param name="fw_gap"       type="float" value="0.025" min="0.005" max="0.1"
+             label="First-wall standoff (m)"
+             help="Gap between plasma edge and first wall inner face [m]"/>
+    </section>
+
+    <section name="blanket_stack" title="Blanket Stack" expanded="true">
+      <param name="fw_material" type="select" label="First wall material">
+        <option value="tungsten" selected="true">Tungsten (W)</option>
+        <option value="ss316">Stainless Steel 316</option>
+      </param>
+      <param name="fw_thick" type="float" value="0.003" min="0.001" max="0.05"
+             label="First wall thickness (m)"
+             help="Structural first wall layer, typically 2–5 mm [m]"/>
+      <param name="be_thick" type="float" value="0.0" min="0.0" max="0.2"
+             label="Beryllium multiplier thickness (m)"
+             help="Be (n,2n) multiplier layer between first wall and blanket. Set to 0 to disable. [m]"/>
+      <param name="blanket_material" type="select" label="Blanket material">
+        <option value="flibe"  selected="true">FLiBe — Li₂BeF₄ (molten salt, 1.94 g/cm³)</option>
+        <option value="pbli">Pb-16Li — Lead-lithium eutectic (9.32 g/cm³)</option>
+        <option value="li">Pure Li — Liquid lithium (0.51 g/cm³)</option>
+      </param>
+      <param name="blanket_thick" type="float" value="0.05" min="0.01" max="1.5"
+             label="FLiBe blanket thickness (m)"
+             help="Radial thickness of the FLiBe breeding tank [m]"/>
+      <param name="li6_enrichment" type="float" value="0.075" min="0.0" max="1.0"
+             label="Li-6 atom fraction in lithium"
+             help="Natural Li = 0.075 (7.5%). Enriched up to 0.95 (95%)."/>
+    </section>
+
+    <section name="run_settings" title="Run Settings" expanded="false">
+      <param name="particles" type="integer" value="50000" min="1000" max="10000000"
+             label="Particles per batch"/>
+      <param name="batches"   type="integer" value="50"    min="10"   max="500"
+             label="Number of batches"/>
+    </section>
+  </inputs>
+
+  <outputs>
+    <data format="json" name="tbr_result" label="TBR Result JSON"
+          help="TBR mean, std dev, and all run parameters. Format: JSON"/>
+    <data format="png"  name="geometry_plot" label="Geometry Plot (R-Z cross section)"
+          from_work_dir="geometry_plot.png"
+          help="R-Z cross section: plasma (blue), first wall (grey), Be (green), FLiBe (orange). Format: PNG"/>
+  </outputs>
+
+  <help>
+**MiniMak TBR Wedge Simulation**
+
+Runs a fixed-source OpenMC neutronics calculation on a 10° toroidal wedge of
+the MiniMak with reflective boundary conditions. Reflective BCs mean the
+result is the whole-machine TBR — no manual area scaling needed.
+
+**Blanket stack (inboard → outboard):**
+
+1. Plasma (14.1 MeV D-T neutron source)
+2. Vacuum gap (first-wall standoff)
+3. **First wall** — tungsten or SS316, typically 2–5 mm
+4. **Beryllium multiplier** — optional (n,2n) layer to boost TBR; set to 0 to disable
+5. **Blanket** — choice of three materials, all with parametric thickness and Li-6 enrichment:
+   - *FLiBe* (Li₂BeF₄) — molten salt, good neutron moderation, strong Be(n,2n) contribution
+   - *Pb-16Li* — lead-lithium eutectic, low pumping power, DEMO/HCLL standard
+   - *Pure Li* — highest lithium density, maximum breeding potential but challenging to handle
+6. Void / vessel shell
+
+**Outputs:**
+
+- ``TBR`` — Tritium Breeding Ratio (mean ± 1σ)
+- Geometry PNG — visual confirmation of the simulated cross-section
+
+**Tips:**
+
+- Natural Li enrichment (7.5%) at MiniMak scale gives TBR ~ 0.1–0.7 depending on thickness
+- Try 2–5 cm Be multiplier to see the boost effect
+- Enriching Li-6 to ~50% can push TBR above 1.0 even at small blanket thickness
+  </help>
+
+  <citations>
+    <citation type="bibtex">
+      @article{openmc,
+        title   = {OpenMC: A state-of-the-art Monte Carlo code for research and development},
+        author  = {Romano, Paul K and others},
+        journal = {Annals of Nuclear Energy},
+        year    = {2015}
+      }
+    </citation>
+  </citations>
+
+</tool>
