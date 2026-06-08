@@ -42,10 +42,10 @@ COIL_NAMES = {
 
 def build_geometry(args):
     return {
-        "tf1": {"radius": args.tf1_radius, "turns": args.tf_turns, "resistance": args.tf_resistance},
-        "tf2": {"radius": args.tf2_radius, "turns": args.tf_turns, "resistance": args.tf_resistance},
-        "pf1": {"radius": args.pf1_radius, "turns": args.pf_turns, "resistance": args.pf_resistance},
-        "pf2": {"radius": args.pf2_radius, "turns": args.pf_turns, "resistance": args.pf_resistance},
+        "tf1": {"radius": args.tf1_radius, "turns": args.tf_turns, "resistance": args.tf_resistance, "z_offset":  0.0},
+        "tf2": {"radius": args.tf2_radius, "turns": args.tf_turns, "resistance": args.tf_resistance, "z_offset":  0.0},
+        "pf1": {"radius": args.pf1_radius, "turns": args.pf_turns, "resistance": args.pf_resistance, "z_offset": +args.pf_coil_z},
+        "pf2": {"radius": args.pf2_radius, "turns": args.pf_turns, "resistance": args.pf_resistance, "z_offset": -args.pf_coil_z},
     }
 
 
@@ -56,7 +56,7 @@ def build_geometry(args):
 def write_geometry_csv(path, geometry):
     with Path(path).open("w", newline="") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["coil_id", "coil_name", "radius_m", "turns", "resistance_ohm"])
+        writer.writerow(["coil_id", "coil_name", "radius_m", "turns", "resistance_ohm", "z_offset_m"])
         for coil_id, coil in geometry.items():
             writer.writerow([
                 coil_id,
@@ -64,6 +64,7 @@ def write_geometry_csv(path, geometry):
                 coil["radius"],
                 coil["turns"],
                 coil["resistance"],
+                coil["z_offset"],
             ])
     print(f"Written: {path}")
 
@@ -72,14 +73,13 @@ def write_geometry_csv(path, geometry):
 # Geometry plot
 # ---------------------------------------------------------------------------
 
-def write_geometry_plot(path, geometry):
+def write_geometry_plot(path, geometry, major_radius=0.23):
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
 
     theta = [i * 2 * math.pi / 100 for i in range(101)]
 
     # TF coils — 8 coils arranged toroidally, split into two banks of 4
-    major_radius = 0.23
     tf_loop_radius = geometry["tf1"]["radius"]
     n_tf = 8
     for i in range(n_tf):
@@ -98,31 +98,33 @@ def write_geometry_plot(path, geometry):
         ax.plot(x_vals, y_vals, z_vals, color=color, linewidth=1.0,
                 label=bank_label if i in (0, n_tf // 2) else None)
 
-    # PF coils — two horizontal rings
-    pf_data = [("pf1", geometry["pf1"]["radius"], 0.15), ("pf2", geometry["pf2"]["radius"], -0.15)]
+    # PF coils — use actual z_offset from geometry
+    pf_data = [("pf1", geometry["pf1"]["radius"], geometry["pf1"]["z_offset"]),
+               ("pf2", geometry["pf2"]["radius"], geometry["pf2"]["z_offset"])]
     for coil_id, r, z0 in pf_data:
         ax.plot([r * math.cos(t) for t in theta],
                 [r * math.sin(t) for t in theta],
                 [z0] * len(theta),
                 color="tomato", linewidth=2.5,
-                label=COIL_NAMES[coil_id])
+                label=f"{COIL_NAMES[coil_id]} (z={z0:+.3f} m)")
 
-    # Machine axis
-    ax.plot([0, 0], [0, 0], [-0.2, 0.2], linestyle="--", linewidth=0.8,
+    # Machine axis — span full PF coil z range plus margin
+    z_extent = max(abs(geometry["pf1"]["z_offset"]), abs(geometry["pf2"]["z_offset"])) + 0.05
+    ax.plot([0, 0], [0, 0], [-z_extent, z_extent], linestyle="--", linewidth=0.8,
             color="black", label="Machine axis")
 
-    axis_limit = max(geometry["tf1"]["radius"], geometry["pf1"]["radius"], 0.3) + 0.1
+    axis_limit = max(major_radius + tf_loop_radius, geometry["pf1"]["radius"], geometry["pf2"]["radius"]) + 0.05
     ax.set_xlim(-axis_limit, axis_limit)
     ax.set_ylim(-axis_limit, axis_limit)
-    ax.set_zlim(-0.25, 0.25)
+    ax.set_zlim(-z_extent, z_extent)
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
     ax.set_zlabel("Z (m)")
     ax.set_title(
-        f"MiniMak coil geometry\n"
+        f"MFEM coil geometry\n"
         f"TF r={geometry['tf1']['radius']} m | "
-        f"PF1 r={geometry['pf1']['radius']} m | "
-        f"PF2 r={geometry['pf2']['radius']} m"
+        f"PF1 r={geometry['pf1']['radius']} m (z={geometry['pf1']['z_offset']:+.3f} m) | "
+        f"PF2 r={geometry['pf2']['radius']} m (z={geometry['pf2']['z_offset']:+.3f} m)"
     )
     ax.legend(fontsize=7)
     plt.tight_layout()
@@ -146,6 +148,7 @@ def main():
     parser.add_argument("--pf-turns",      type=int,   required=True, help="Number of turns per PF coil")
     parser.add_argument("--tf-resistance", type=float, required=True, help="TF coil resistance [ohm]")
     parser.add_argument("--pf-resistance", type=float, required=True, help="PF coil resistance [ohm]")
+    parser.add_argument("--pf-coil-z",     type=float, default=0.15,  help="Axial offset of PF coils from machine midplane [m] (pf1=+z, pf2=-z)")
     parser.add_argument("--output-csv",    required=True, help="Output geometry CSV path")
     parser.add_argument("--output-png",    required=True, help="Output geometry plot PNG path")
 

@@ -15,6 +15,7 @@
             --pf-turns      $pf_turns
             --tf-resistance '$tf_resistance'
             --pf-resistance '$pf_resistance'
+            --pf-coil-z     '$pf_coil_z'
             --output-csv    output.csv
             --output-png    output.png &&
         mv output.csv '$output_csv' &&
@@ -38,6 +39,8 @@
            help="Resistance of each TF coil bank - used to convert voltage to current"/>
     <param type="float"   name="pf_resistance" value="1.0"   label="PF coil resistance (ohm)"
            help="Resistance of each PF coil bank - used to convert voltage to current"/>
+    <param type="float"   name="pf_coil_z"     value="0.15"  label="PF coil axial offset (m)"
+           help="Distance from machine midplane to PF coils — pf1 is placed at +z, pf2 at -z"/>
   </inputs>
 
   <outputs>
@@ -74,7 +77,7 @@ reused across multiple MFEM timeseries runs.
 
 **Output CSV columns**::
 
-  coil_id, coil_name, radius_m, turns, resistance_ohm
+  coil_id, coil_name, radius_m, turns, resistance_ohm, z_offset_m
 
 Feed this CSV directly into the **MFEM Time Series Demo** geometry input.
   </help>
