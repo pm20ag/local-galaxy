@@ -31,26 +31,26 @@ from matplotlib.ticker import MultipleLocator
 
 
 DEMO_META = {
-    1: {"label": "SQ1 TF1 DEMO",  "title": "SQ1 — TF1 Demo (TF Bank 1 ramp)",                    "channels": ["V_ch0"]},
-    2: {"label": "SQ2 TF2 DEMO",  "title": "SQ2 — TF2 Demo (TF Bank 2 ramp)",                    "channels": ["V_ch1"]},
-    3: {"label": "SQ3 PF DEMO1",  "title": "SQ3 — PF Demo 1 (PF Bank 1 ramp)",                   "channels": ["V_ch2"]},
-    4: {"label": "SQ4 PF2",       "title": "SQ4 — PF Bank 2 ramp",                               "channels": ["V_ch3"]},
-    7: {"label": "SQ7 PF DEMO2",  "title": "SQ7 — PF Demo 2 (Ramp PF1 then PF2, ring movement)", "channels": ["V_ch2", "V_ch3"]},
-    8: {"label": "SQ8 TF1&PF",    "title": "SQ8 — Ramp TF1 then PF1",                            "channels": ["V_ch0", "V_ch2"]},
+    1: {"label": "SQ1 TF1 DEMO",  "title": "SQ1 — TF1 Demo (TF Bank 1 ramp)",                    "channels": ["TF1"]},
+    2: {"label": "SQ2 TF2 DEMO",  "title": "SQ2 — TF2 Demo (TF Bank 2 ramp)",                    "channels": ["TF2"]},
+    3: {"label": "SQ3 PF DEMO1",  "title": "SQ3 — PF Demo 1 (PF Bank 1 ramp)",                   "channels": ["PF1"]},
+    4: {"label": "SQ4 PF2",       "title": "SQ4 — PF Bank 2 ramp",                               "channels": ["PF2"]},
+    7: {"label": "SQ7 PF DEMO2",  "title": "SQ7 — PF Demo 2 (Ramp PF1 then PF2, ring movement)", "channels": ["PF1", "PF2"]},
+    8: {"label": "SQ8 TF1&PF",    "title": "SQ8 — Ramp TF1 then PF1",                            "channels": ["TF1", "PF1"]},
 }
 
 CHANNEL_NAMES = {
-    "V_ch0": "TF bank 1 (AO ch 0)",
-    "V_ch1": "TF bank 2 (AO ch 1)",
-    "V_ch2": "PF bank 1 (AO ch 2)",
-    "V_ch3": "PF bank 2 (AO ch 3)",
+    "TF1": "TF bank 1",
+    "TF2": "TF bank 2",
+    "PF1": "PF bank 1",
+    "PF2": "PF bank 2",
 }
 
 CHANNEL_COLORS = {
-    "V_ch0": "steelblue",
-    "V_ch1": "tomato",
-    "V_ch2": "seagreen",
-    "V_ch3": "darkorange",
+    "TF1": "steelblue",
+    "TF2": "tomato",
+    "PF1": "seagreen",
+    "PF2": "darkorange",
 }
 
 
@@ -109,14 +109,12 @@ def simulate(demo: int, interval_ms: float, aoinc: float,
                 ch[2] = clamp((v_max - Aout0) / 2, alimit)
 
         records.append({
-            "t_ms":           round(t_ms, 3),
-            "t_s":            round(t_ms / 1000.0, 6),
-            "Aout0":          round(Aout0, 6),
-            "channel_switch": int(channel_switch),
-            "V_ch0":          round(ch[0], 6),
-            "V_ch1":          round(ch[1], 6),
-            "V_ch2":          round(ch[2], 6),
-            "V_ch3":          round(ch[3], 6),
+            "t_ms": round(t_ms, 3),
+            "t_s":  round(t_ms / 1000.0, 6),
+            "TF1":  round(ch[0], 6),
+            "TF2":  round(ch[1], 6),
+            "PF1":  round(ch[2], 6),
+            "PF2":  round(ch[3], 6),
         })
 
     return records

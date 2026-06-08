@@ -80,12 +80,18 @@ def load_timeseries(csv_path, tf_gain, pf_gain):
     with open(csv_path, newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Accept coil-named columns (TF1/TF2/PF1/PF2 — MiniMak MQTT format)
+            # or legacy channel columns (V_ch0..V_ch3)
+            tf1_v = float(row.get("TF1") or row["V_ch0"])
+            tf2_v = float(row.get("TF2") or row["V_ch1"])
+            pf1_v = float(row.get("PF1") or row["V_ch2"])
+            pf2_v = float(row.get("PF2") or row["V_ch3"])
             records.append({
                 "t_s":   float(row["t_s"]),
-                "I_tf1": float(row["V_ch0"]) * tf_gain,
-                "I_tf2": float(row["V_ch1"]) * tf_gain,
-                "I_pf1": float(row["V_ch2"]) * pf_gain,
-                "I_pf2": float(row["V_ch3"]) * pf_gain,
+                "I_tf1": tf1_v * tf_gain,
+                "I_tf2": tf2_v * tf_gain,
+                "I_pf1": pf1_v * pf_gain,
+                "I_pf2": pf2_v * pf_gain,
             })
     print(f"Loaded {len(records)} timesteps  "
           f"(t = {records[0]['t_s']:.3f} s to {records[-1]['t_s']:.3f} s)")

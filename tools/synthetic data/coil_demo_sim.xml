@@ -80,7 +80,7 @@ Reproduces the synthetic coil-command sequences from the MiniMak firmware
 
 **Output CSV columns**::
 
-  t_ms, t_s, Aout0, channel_switch, V_ch0, V_ch1, V_ch2, V_ch3
+  t_ms, t_s, TF1, TF2, PF1, PF2
 
 The CSV output can be passed directly to the **Magpy Field Solver (Time Series)**
 tool to compute the evolving magnetic field for the simulated sequence.
