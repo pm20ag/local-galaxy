@@ -1,0 +1,83 @@
+<tool id="mfem_coil_geometry" name="MFEM Coil Geometry" version="0.1.0">
+  <description>Define MiniMak coil electrical and physical parameters for MFEM field analysis</description>
+
+  <requirements>
+    <container type="docker">anthny23/python-sci:1.0.0</container>
+  </requirements>
+
+  <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/mfem_coil_geometry.py'
+            --tf1-radius    '$tf1_radius'
+            --tf2-radius    '$tf2_radius'
+            --pf1-radius    '$pf1_radius'
+            --pf2-radius    '$pf2_radius'
+            --tf-turns      $tf_turns
+            --pf-turns      $pf_turns
+            --tf-resistance '$tf_resistance'
+            --pf-resistance '$pf_resistance'
+            --output-csv    output.csv
+            --output-png    output.png &&
+        mv output.csv '$output_csv' &&
+        mv output.png '$output_png'
+  ]]></command>
+
+  <inputs>
+    <param type="float"   name="tf1_radius"    value="0.075" label="TF bank 1 radius (m)"
+           help="Radius of the TF bank 1 coil loop"/>
+    <param type="float"   name="tf2_radius"    value="0.075" label="TF bank 2 radius (m)"
+           help="Radius of the TF bank 2 coil loop"/>
+    <param type="float"   name="pf1_radius"    value="0.12"  label="PF bank 1 radius (m)"
+           help="Radius of the PF bank 1 ring from the machine axis"/>
+    <param type="float"   name="pf2_radius"    value="0.12"  label="PF bank 2 radius (m)"
+           help="Radius of the PF bank 2 ring from the machine axis"/>
+    <param type="integer" name="tf_turns"      value="1"     label="TF coil turns"
+           help="Number of turns per TF coil bank"/>
+    <param type="integer" name="pf_turns"      value="1"     label="PF coil turns"
+           help="Number of turns per PF coil bank"/>
+    <param type="float"   name="tf_resistance" value="1.0"   label="TF coil resistance (ohm)"
+           help="Resistance of each TF coil bank - used to convert voltage to current"/>
+    <param type="float"   name="pf_resistance" value="1.0"   label="PF coil resistance (ohm)"
+           help="Resistance of each PF coil bank - used to convert voltage to current"/>
+  </inputs>
+
+  <outputs>
+    <data format="csv" name="output_csv" label="Coil geometry (CSV)"
+          help="Geometry CSV with coil_id, radius_m, turns, resistance_ohm - feed into MFEM Time Series Demo"/>
+    <data format="png" name="output_png" label="Coil geometry plot (PNG)"
+          help="3-D visualisation of the defined coil geometry"/>
+  </outputs>
+
+  <help>
+**MFEM Coil Geometry**
+
+Defines the physical and electrical parameters for each MiniMak coil bank and
+outputs a geometry CSV that can be passed directly to the **MFEM Time Series Demo** tool.
+
+This tool replaces the geometry definition step that was previously bundled
+inside the MFEM Coil Demo tool, allowing geometry to be defined once and
+reused across multiple MFEM timeseries runs.
+
+**Coil banks**
+
++------+-----------+----------------------------------------------+
+| ID   | Name      | Description                                  |
++------+-----------+----------------------------------------------+
+| tf1  | TF bank 1 | Toroidal field coils, first bank (4 coils)   |
+| tf2  | TF bank 2 | Toroidal field coils, second bank (4 coils)  |
+| pf1  | PF bank 1 | Poloidal field upper ring                    |
+| pf2  | PF bank 2 | Poloidal field lower ring                    |
++------+-----------+----------------------------------------------+
+
+**Default radii** match the MiniMak parametric coil generator defaults:
+- TF coil radius: 0.075 m (cross-sectional loop radius)
+- PF coil radius: 0.12 m (ring radius from machine axis)
+
+**Output CSV columns**::
+
+  coil_id, coil_name, radius_m, turns, resistance_ohm
+
+Feed this CSV directly into the **MFEM Time Series Demo** geometry input.
+  </help>
+
+  <citations/>
+</tool>
