@@ -16,6 +16,8 @@
             --tf-resistance '$tf_resistance'
             --pf-resistance '$pf_resistance'
             --pf-coil-z     '$pf_coil_z'
+            --major-radius  '$major_radius'
+            --n-tf-coils    $n_tf_coils
             --output-csv    output.csv
             --output-png    output.png &&
         mv output.csv '$output_csv' &&
@@ -41,6 +43,10 @@
            help="Resistance of each PF coil bank - used to convert voltage to current"/>
     <param type="float"   name="pf_coil_z"     value="0.15"  label="PF coil axial offset (m)"
            help="Distance from machine midplane to PF coils — pf1 is placed at +z, pf2 at -z"/>
+    <param type="float"   name="major_radius"  value="0.23"  label="Machine major radius (m)"
+           help="Distance from the Z-axis to the centre of each TF coil. Written into the geometry CSV and used by the MFEM Time Series Demo for the TF field model."/>
+    <param type="integer" name="n_tf_coils"    value="8"     label="Number of TF coils (total)"
+           help="Total TF coil count across both banks. MiniMak default: 8 (4 per bank). Written into the geometry CSV."/>
   </inputs>
 
   <outputs>
