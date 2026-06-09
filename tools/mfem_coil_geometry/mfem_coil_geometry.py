@@ -53,10 +53,11 @@ def build_geometry(args):
 # CSV writer
 # ---------------------------------------------------------------------------
 
-def write_geometry_csv(path, geometry):
+def write_geometry_csv(path, geometry, major_radius, n_tf_coils):
     with Path(path).open("w", newline="") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["coil_id", "coil_name", "radius_m", "turns", "resistance_ohm", "z_offset_m"])
+        writer.writerow(["coil_id", "coil_name", "radius_m", "turns", "resistance_ohm",
+                         "z_offset_m", "major_radius_m", "n_tf_coils"])
         for coil_id, coil in geometry.items():
             writer.writerow([
                 coil_id,
@@ -65,6 +66,8 @@ def write_geometry_csv(path, geometry):
                 coil["turns"],
                 coil["resistance"],
                 coil["z_offset"],
+                major_radius,
+                n_tf_coils,
             ])
     print(f"Written: {path}")
 
@@ -73,15 +76,14 @@ def write_geometry_csv(path, geometry):
 # Geometry plot
 # ---------------------------------------------------------------------------
 
-def write_geometry_plot(path, geometry, major_radius=0.23):
+def write_geometry_plot(path, geometry, major_radius=0.23, n_tf_coils=8):
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
 
     theta = [i * 2 * math.pi / 100 for i in range(101)]
 
-    # TF coils — 8 coils arranged toroidally, split into two banks of 4
     tf_loop_radius = geometry["tf1"]["radius"]
-    n_tf = 8
+    n_tf = n_tf_coils
     for i in range(n_tf):
         phi = 2 * math.pi * i / n_tf
         x_c = major_radius * math.cos(phi)
@@ -149,14 +151,16 @@ def main():
     parser.add_argument("--tf-resistance", type=float, required=True, help="TF coil resistance [ohm]")
     parser.add_argument("--pf-resistance", type=float, required=True, help="PF coil resistance [ohm]")
     parser.add_argument("--pf-coil-z",     type=float, default=0.15,  help="Axial offset of PF coils from machine midplane [m] (pf1=+z, pf2=-z)")
+    parser.add_argument("--major-radius",  type=float, default=0.23,  help="Machine major radius [m] — distance from Z-axis to TF coil centres")
+    parser.add_argument("--n-tf-coils",    type=int,   default=8,     help="Total number of TF coils (split equally between tf1 and tf2 banks)")
     parser.add_argument("--output-csv",    required=True, help="Output geometry CSV path")
     parser.add_argument("--output-png",    required=True, help="Output geometry plot PNG path")
 
     args = parser.parse_args()
 
     geometry = build_geometry(args)
-    write_geometry_csv(args.output_csv, geometry)
-    write_geometry_plot(args.output_png, geometry)
+    write_geometry_csv(args.output_csv, geometry, args.major_radius, args.n_tf_coils)
+    write_geometry_plot(args.output_png, geometry, args.major_radius, args.n_tf_coils)
 
 
 if __name__ == "__main__":
