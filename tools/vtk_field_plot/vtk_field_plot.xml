@@ -1,0 +1,87 @@
+<tool id="vtk_field_plot" name="VTK Field Plot" version="0.1.0">
+  <description>Render 3D scalar field isosurfaces from a VTK StructuredGrid as a PNG</description>
+
+  <requirements>
+    <container type="docker">anthny23/python-sci-magpy:1.1.0</container>
+  </requirements>
+
+  <command detect_errors="exit_code"><![CDATA[
+    cp '$input_vtk' input.vts &&
+    python '$__tool_directory__/vtk_field_plot.py'
+        --input-vtk  input.vts
+        --field-name '$field_name'
+        --n-contours $n_contours
+        --colormap   '$colormap'
+        --output-png output.png &&
+    mv output.png '$output_png'
+  ]]></command>
+
+  <inputs>
+    <param name="input_vtk"
+           type="data"
+           format="xml"
+           label="VTK field volume"
+           help="VTK XML StructuredGrid (.vts) from MFEM Time Series Demo or Magpy Field Solver"/>
+
+    <param name="field_name"
+           type="text"
+           value="Bz_total"
+           label="Scalar field name"
+           help="Name of the scalar field to visualise — must match the field written by the upstream tool"/>
+
+    <param name="n_contours"
+           type="integer"
+           value="7"
+           min="1"
+           max="20"
+           label="Number of isosurface levels"
+           help="How many isosurface contours to generate across the field range"/>
+
+    <param name="colormap"
+           type="select"
+           label="Colormap"
+           help="Colour scale for the isosurfaces">
+      <option value="plasma" selected="true">plasma</option>
+      <option value="viridis">viridis</option>
+      <option value="coolwarm">coolwarm</option>
+      <option value="jet">jet</option>
+      <option value="magma">magma</option>
+      <option value="RdBu_r">RdBu_r (diverging)</option>
+    </param>
+  </inputs>
+
+  <outputs>
+    <data name="output_png"
+          format="png"
+          label="Field isosurface plot (${tool.name})"/>
+  </outputs>
+
+  <help><![CDATA[
+**VTK Field Plot**
+
+Renders isosurface contours of a 3D scalar field (e.g. **Bz_total**) stored in a VTK
+XML StructuredGrid file and outputs a three-view PNG (front, top, isometric).
+
+Use this tool for **quick in-Galaxy visual validation** of the magnetic field volume
+before feeding it into the Omniverse pipeline via **vtk_to_usd_volume**.
+
+**Input**
+
+A ``*.vts`` VTK XML StructuredGrid file as produced by:
+
+- MFEM Time Series Demo (``output_vtk``)
+- Magpy Field Solver Time Series (``output_vtk``)
+
+**Output**
+
+Three-panel PNG showing the isosurfaces from front, top, and isometric viewpoints,
+coloured by the scalar field value.
+
+**Field name**
+
+Must match the field name written by the upstream tool.  The default is ``Bz_total``
+which is what both MFEM and Magpy tools write.
+  ]]></help>
+
+  <citations/>
+</tool>
